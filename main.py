@@ -1,6 +1,7 @@
 """
 AEGIS-X FINAL - main.py
-Tüm sistemin final noktası. Karargah ekranı simülasyonunu başlatır.
+Tüm sistemin final noktası. Telsizden (Drone'dan) gelen GERÇEK 
+AES şifreli veriyi yakalar, anahtarla çözer ve Karargah ekranına basar.
 """
 
 import sys
@@ -10,34 +11,38 @@ from rich.console import Console
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from src.crypto_handler import get_encrypted_payload, simulate_decryption
+from src.crypto_handler import generate_real_drone_payload, decrypt_payload
 from src.c2_dashboard import display_dashboard
 
 def main():
     console = Console()
     
     # 1. Bekleme ekranı
-    console.print("[bold cyan][*] Karargah dinleme modu aktif. Ufuk hatti taranıyor...[/bold cyan]")
+    console.print("[bold cyan][*] Karargah Radyo (RF) dinleme modu aktif. Ufuk hatti taranıyor...[/bold cyan]")
     time.sleep(2)
     
-    # 2. Sinyal yakalama
-    console.print("\n[bold yellow][!] DIKKAT: Jammer sınırından bilinmeyen bir 'BURST' sinyali yakalandı![/bold yellow]")
-    time.sleep(1.5)
+    # 2. Sinyal yakalama (DRONE BURADA GERÇEK VERİYİ ŞİFRELER VE YOLLAR)
+    encrypted_bytes = generate_real_drone_payload()
     
-    encrypted_data = get_encrypted_payload()
-    console.print(f"[dim]Kriptolu Ham Veri: {encrypted_data}[/dim]\n")
-    time.sleep(1)
+    console.print("\n[bold yellow][!] DIKKAT: Jammer sınırından GERÇEK AES ŞİFRELİ bir 'BURST' sinyali yakalandı![/bold yellow]")
+    # Gerçek şifreli byteları Base64'e çevirip ekranda gösterelim ki inandırıcı olsun
+    console.print(f"[dim]Kriptolu Ham Veri (Bytes): {encrypted_bytes.decode('utf-8')[:100]}...[/dim]\n")
+    time.sleep(2)
     
-    # 3. Kripto Çözümü
-    console.print("[bold red][+] Kaynak Dogrulandı: AEGIS-X KUS-1 (Kurye Drone).[/bold red]")
-    console.print("[bold red][+] Istihbarat paketi cozumleniyor (AES-256 Key Match)...[/bold red]")
-    simulate_decryption(console)
+    # 3. Kripto Çözümü (KARARGAH ANAHTAR İLE ŞİFREYİ ÇÖZER)
+    console.print("[bold red][+] Önceden paylaşılan (Pre-Shared) AES Anahtarı ile şifre çözülüyor...[/bold red]")
+    time.sleep(2)
     
-    console.print("\n[bold green][+] SIFRE COZULDU. ISTIHBARAT RAPORU EKRANA YANSITILIYOR...[/bold green]\n")
-    time.sleep(1.5)
-    
-    # 4. Ana Ekran
-    display_dashboard(console)
+    try:
+        decrypted_json_data = decrypt_payload(encrypted_bytes)
+        console.print("[bold green][+] ŞİFRE BAŞARIYLA ÇÖZÜLDÜ. JSON VERİSİ AYRIŞTIRILDI.[/bold green]\n")
+        time.sleep(1)
+        
+        # 4. Ana Ekranı Gerçek Veriyle Çiz
+        display_dashboard(console, decrypted_json_data)
+        
+    except Exception as e:
+        console.print(f"[bold red]ŞİFRE ÇÖZME HATASI (Yetkisiz Erişim): {e}[/bold red]")
 
 if __name__ == "__main__":
     main()

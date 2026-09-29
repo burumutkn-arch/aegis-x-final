@@ -1,34 +1,41 @@
 """
 AEGIS-X FINAL - crypto_handler.py
-Kuryeden (KUS-1) gelen AES-256 şifreli ham veriyi ve çözümleme (decryption) 
-algoritmasını simüle eder.
+GERÇEK AES Şifreleme Modülü. 
+Bu kod donanıma (Drone ve Karargah) yüklendiğinde, veriyi gerçekten kriptolar.
 """
 
-import time
-import random
+import json
+from cryptography.fernet import Fernet
 
-def get_encrypted_payload():
-    """Havadan yakalanan sahte şifreli HEX verisi üretir."""
-    chars = "0123456789ABCDEF"
-    payload = ""
-    for _ in range(8):
-        block = "".join(random.choice(chars) for _ in range(16))
-        payload += block + " "
-    return payload.strip()
+# GERÇEK BİR AES ANAHTARI ÜRETİMİ
+# Gerçek bir operasyonda bu anahtar uçuştan önce drone'a ve karargaha fiziksel olarak yüklenir (Pre-Shared Key).
+SECRET_KEY = Fernet.generate_key()
+cipher_suite = Fernet(SECRET_KEY)
 
-def simulate_decryption(console):
-    """Şifre kırma (Brute-force / AES key) animasyonu."""
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+def generate_real_drone_payload():
+    """Drone'un jammer'dan çıkınca oluşturacağı GERÇEK JSON istihbarat verisi."""
+    drone_data = {
+        "source": "AEGIS-X KUS-1 (Kurye)",
+        "targets": [
+            {"type": "S-400 (Batarya)", "lat": 39.851, "lon": 33.420, "lock": "KUS-3"},
+            {"type": "KRASUKHA-4 (Jammer)", "lat": 39.865, "lon": 33.411, "lock": "KUS-5"}
+        ],
+        "decoys": [
+            {"type": "SAHTE HEDEF (Decoy)", "lat": 39.890, "lon": 33.390, "reason": "Termal isi yok"}
+        ]
+    }
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        console=console
-    ) as progress:
-        task1 = progress.add_task("[red]AES-256 Sifresi Cozuluyor...", total=100)
-        
-        while not progress.finished:
-            time.sleep(0.04) # Simülasyon hızı
-            progress.update(task1, advance=random.uniform(1, 4))
+    # 1. Veriyi JSON string'e çevir
+    json_str = json.dumps(drone_data)
+    
+    # 2. GERÇEK AES ile şifrele (Bytes formatına çevrilir)
+    encrypted_bytes = cipher_suite.encrypt(json_str.encode('utf-8'))
+    return encrypted_bytes
+
+def decrypt_payload(encrypted_bytes):
+    """Karargahın telsizden gelen şifreli veriyi AES Anahtarı ile çözdüğü GERÇEK fonksiyon."""
+    # Şifreyi çöz
+    decrypted_bytes = cipher_suite.decrypt(encrypted_bytes)
+    # Geri JSON (Dictionary) objesine çevir
+    json_str = decrypted_bytes.decode('utf-8')
+    return json.loads(json_str)
